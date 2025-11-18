@@ -1,0 +1,46 @@
+# === Gradle ===
+.gradle/
+build/
+
+# Local Gradle Wrapper JARs (optional to ignore)
+gradle/wrapper/gradle-wrapper.jar
+
+# === IntelliJ IDEA ===
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# === Logs ===
+*.log
+
+# === OS files ===
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# MacOS
+.DS_Store
+
+# === Java ===
+*.class
+
+# === Other tooling ===
+# Copilot / JetBrains AI cache
+.idea/copilot/
+
+# === Temporary files ===
+*.tmp
+*.swp
+*.swo
+
+# === Ignore distribution archives ===
+*.jar
+*.war
+*.ear
+
+# === Cache directories ===
+build/
+bin/
