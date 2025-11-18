@@ -93,15 +93,8 @@ public class InputHandler {
 
 	            return coord;
 
-	        } catch (IllegalArgumentException e) {
-	            CliDisplay.showError(e.getMessage());
-	        } catch (InvalidCoordinateFormatException e) {
-	            CliDisplay.showError(e.getMessage());
-	        } catch (InvalidCoordinateBoundsException e) {
-	            CliDisplay.showError(e.getMessage());
-	        } catch (CardAlreadyMatchedException e) { 
-	            CliDisplay.showError(e.getMessage());
-	        } catch (SameCardSelectionException e) { 
+	        } catch (IllegalArgumentException | InvalidCoordinateFormatException | InvalidCoordinateBoundsException |
+					 CardAlreadyMatchedException | SameCardSelectionException e) {
 	            CliDisplay.showError(e.getMessage());
 	        }
 	    }
