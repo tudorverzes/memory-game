@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CardTest {
     @Test
-    @DisplayName("[TC-C-001] Should initialize with correct ID, symbol, and not revealed")
+    @DisplayName("[TC-C-01] Should initialize with correct ID, symbol, and not revealed")
     void testCardInitialization() {
         String expectedId = "pair-1";
         String expectedSymbol = "A";
@@ -21,7 +21,7 @@ class CardTest {
     }
 
     @Test
-    @DisplayName("[TC-C-002] Should transition from not revealed to revealed")
+    @DisplayName("[TC-C-02] Should transition from not revealed to revealed")
     void testSetRevealedToTrue() {
         Card card = new Card("pair-2", "A");
         assertFalse(card.isRevealed(), "Precondition: Card should start as not revealed.");
@@ -32,7 +32,7 @@ class CardTest {
     }
 
     @Test
-    @DisplayName("[TC-C-003] Should transition from revealed back to not revealed")
+    @DisplayName("[TC-C-03] Should transition from revealed back to not revealed")
     void testSetRevealedToFalseAfterBeingTrue() {
         Card card = new Card("pair-3", "B");
         card.setRevealed(true);
@@ -44,7 +44,7 @@ class CardTest {
     }
 
     @Test
-    @DisplayName("[TC-C-004] ID and Symbol should be immutable")
+    @DisplayName("[TC-C-04] ID and Symbol should be immutable")
     void testIdAndSymbolAreImmutable() {
         String initialId = "id_original";
         String initialSymbol = "sym_original";
@@ -57,7 +57,7 @@ class CardTest {
     }
 
     @Test
-    @DisplayName("[TC-C-005] setRevealed should be idempotent")
+    @DisplayName("[TC-C-05] setRevealed should be idempotent")
     void testSetRevealedIsIdempotent() {
         Card card = new Card("pair-4", "C");
 
@@ -73,7 +73,7 @@ class CardTest {
     }
 
     @Test
-    @DisplayName("[TC-C-006] Should handle null values in constructor")
+    @DisplayName("[TC-C-06] Should handle null values in constructor")
     void testConstructorWithNullValues() {
         Card card = new Card(null, null);
 
@@ -83,7 +83,7 @@ class CardTest {
     }
 
     @Test
-    @DisplayName("[TC-C-007] Should handle empty strings in constructor")
+    @DisplayName("[TC-C-07] Should handle empty strings in constructor")
     void testConstructorWithEmptyStrings() {
         Card card = new Card("", "");
 
