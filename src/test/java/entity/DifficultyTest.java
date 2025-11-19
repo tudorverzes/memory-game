@@ -9,7 +9,7 @@ import org.vv.entity.Difficulty;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class DifficultyTest {
+class DifficultyTest {
     @Test
     @DisplayName("[TC-D-01] Easy difficulty should have correct configuration")
     void testEasyConfiguration() {

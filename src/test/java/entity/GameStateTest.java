@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.vv.entity.Difficulty;
 import org.vv.entity.GameBoard;
 import org.vv.entity.GameState;
@@ -30,6 +31,8 @@ class GameStateTest {
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
+
         singlePlayerList = Collections.singletonList(mockPlayer1);
         twoPlayerList = List.of(mockPlayer1, mockPlayer2);
     }

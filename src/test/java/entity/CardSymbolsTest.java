@@ -11,7 +11,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CardSymbolsTest {
+class CardSymbolsTest {
     private static final int MAX_SYMBOLS = 32;
 
     @Test
