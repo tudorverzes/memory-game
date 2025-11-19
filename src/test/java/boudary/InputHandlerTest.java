@@ -46,11 +46,11 @@ class InputHandlerTest {
 	@Test
 	@DisplayName("TC-INP-02: Trimmed valid input returns name without spaces")
 	void testGetPlayerName_validTrimmedInput() throws Exception {
-		setScannerInput("   Bob   \n");
+		setScannerInput("   Alice   \n");
 
 		String result = InputHandler.getPlayerName(1, "Default");
 
-		assertEquals("Bob", result);
+		assertEquals("Alice", result);
 		assertTrue(outputStream.toString().isEmpty(), "No warnings expected");
 	}
 
