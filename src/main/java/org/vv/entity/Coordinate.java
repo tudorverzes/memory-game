@@ -4,7 +4,6 @@ import org.vv.exception.InvalidCoordinateFormatException;
 
 import java.util.Objects;
 
-
 public class Coordinate {
 
     private final int row;
