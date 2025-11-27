@@ -1,10 +1,14 @@
 package org.vv.boudary;
-import org.vv.entity.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.vv.entity.Card;
+import org.vv.entity.Coordinate;
+import org.vv.entity.GameBoard;
+import org.vv.entity.GameConfiguration;
+import org.vv.entity.GameState;
+import org.vv.entity.Player;
 
 public class Game {
 
