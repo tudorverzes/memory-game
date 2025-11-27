@@ -35,7 +35,7 @@ public class GameBoard {
 
 
         int k = 0;
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < size + 1; i++) {
             for (int j = 0; j < size; j++) {
                 grid[i][j] = cardsToPlace.get(k++);
             }
