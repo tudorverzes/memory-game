@@ -1,21 +1,16 @@
 package org.vv.boudary;
-import java.io.InputStream;
+import org.vv.entity.Coordinate;
+import org.vv.entity.Difficulty;
+import org.vv.entity.ErrorMessages;
+import org.vv.entity.GameBoard;
+import org.vv.exception.*;
+
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import org.vv.entity.Coordinate;
-import org.vv.entity.Difficulty;
-import org.vv.entity.GameBoard;
-import org.vv.entity.ErrorMessages;
-import org.vv.exception.CardAlreadyMatchedException;
-import org.vv.exception.InvalidCoordinateBoundsException;
-import org.vv.exception.InvalidCoordinateFormatException;
-import org.vv.exception.MaxAttemptsExceededException;
-import org.vv.exception.SameCardSelectionException;
-
 public class InputHandler {
 
-	private static Scanner scanner = new Scanner(System.in);
+	private static final Scanner scanner = new Scanner(System.in);
 	private static final int MAX_ATTEMPTS = 5;
 
 	public static String getPlayerName(int playerNum, String defaultName) {
@@ -98,15 +93,8 @@ public class InputHandler {
 
 	            return coord;
 
-	        } catch (IllegalArgumentException e) {
-	            CliDisplay.showError(e.getMessage());
-	        } catch (InvalidCoordinateFormatException e) {
-	            CliDisplay.showError(e.getMessage());
-	        } catch (InvalidCoordinateBoundsException e) {
-	            CliDisplay.showError(e.getMessage());
-	        } catch (CardAlreadyMatchedException e) { 
-	            CliDisplay.showError(e.getMessage());
-	        } catch (SameCardSelectionException e) { 
+	        } catch (IllegalArgumentException | InvalidCoordinateFormatException | InvalidCoordinateBoundsException |
+					 CardAlreadyMatchedException | SameCardSelectionException e) {
 	            CliDisplay.showError(e.getMessage());
 	        }
 	    }
