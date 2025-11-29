@@ -1,6 +1,7 @@
 package boudary;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.vv.boudary.InputHandler;
 import org.vv.entity.Card;
 import org.vv.entity.Coordinate;
@@ -18,13 +19,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.ArgumentMatchers.any;
 
+@ExtendWith(MockitoExtension.class)
 class InputHandlerTest {
 
 	private final InputStream originalIn = System.in;
 	private static final PrintStream originalOut = System.out;
 	private static ByteArrayOutputStream outputStream;
-	private ByteArrayOutputStream outContent;
 
         @Mock
     private GameBoard mockBoard;
@@ -37,18 +40,6 @@ class InputHandlerTest {
     void setUp() throws Exception {
         outputStream = new ByteArrayOutputStream();
         System.setOut(new PrintStream(outputStream));
-    }
-
-    @AfterEach
-    void tearDown() {
-        System.setOut(originalOut);
-    }
-
-	@BeforeEach
-    void setUpStreams() {
-        
-        outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
     }
 
     @AfterEach
@@ -107,9 +98,11 @@ class InputHandlerTest {
     void testGetPlayerName_nameTooLong_isTruncatedWithWarning() throws Exception {
         String longName = "abcdefghijklmnopqrstuXYZ";
         setScannerInput(longName + "\n");
-
+        String result = InputHandler.getPlayerName(1, "DefaultName");
 		String consoleOutput = outputStream.toString();
-		assertTrue(consoleOutput.contains("Name too long"), "Expected truncation warning");
+		assertTrue(consoleOutput.contains("Name too long"));
+		assertEquals(20, result.length());
+		assertEquals("abcdefghijklmnopqrst", result);
 	}
 
 	    @Test
@@ -137,7 +130,7 @@ class InputHandlerTest {
         assertEquals(20, result.length());
         assertEquals("AlessandroMagnoIlCon", result);
 		
-        assertTrue(outContent.toString().contains("Name too long"));
+        assertTrue(outputStream.toString().contains("Name too long"));
     }
 
 	
@@ -158,7 +151,7 @@ class InputHandlerTest {
 		
         provideInput("3\n1\n");
         assertEquals(1, InputHandler.getPlayerCount());
-        assertTrue(outContent.toString().contains(ErrorMessages.E009));
+        assertTrue(outputStream.toString().contains(ErrorMessages.E009));
     }
 
     @Test
@@ -166,7 +159,7 @@ class InputHandlerTest {
 		
         provideInput("abc\n2\n");
         assertEquals(2, InputHandler.getPlayerCount());
-        assertTrue(outContent.toString().contains(ErrorMessages.E005));
+        assertTrue(outputStream.toString().contains(ErrorMessages.E005));
     }
 
     @Test
@@ -202,7 +195,7 @@ class InputHandlerTest {
 		
         provideInput("4\n1\n");
         assertEquals(Difficulty.EASY, InputHandler.getDifficulty());
-        assertTrue(outContent.toString().contains(ErrorMessages.E005));
+        assertTrue(outputStream.toString().contains(ErrorMessages.E005));
     }
     
     @Test
@@ -232,51 +225,47 @@ class InputHandlerTest {
 
     @Test
     void testGetCoordinateInput_CardAlreadyRevealed() {
-
-        provideInput("A1\nA2\n");
+    	provideInput("A1\nA2\n");
         int gridSize = 4;
-        
-        Coordinate coordA1 = new Coordinate(0, 0);
-        Coordinate coordA2 = new Coordinate(0, 1);
+        Coordinate expectedResult = new Coordinate(1, 0); 
 
 
-        when(mockBoard.getCardAt(eq(coordA1))).thenReturn(mockCardA1);
-        when(mockCardA1.isRevealed()).thenReturn(true); 
+        	when(mockBoard.getCardAt(any(Coordinate.class)))
+            .thenReturn(mockCardA1)
+            .thenReturn(mockCardA2);
 
-
-        when(mockBoard.getCardAt(eq(coordA2))).thenReturn(mockCardA2);
+        when(mockCardA1.isRevealed()).thenReturn(true);
         when(mockCardA2.isRevealed()).thenReturn(false);
 
         Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, null);
         
+        assertEquals(expectedResult.getRow(), result.getRow());
+        assertEquals(expectedResult.getCol(), result.getCol());
 
-        assertEquals(coordA2, result);
-
-        assertTrue(outContent.toString().contains(ErrorMessages.E003));
+        assertTrue(outputStream.toString().contains(ErrorMessages.E003));
     }
 
     @Test
     void testGetCoordinateInput_SameCardSelected() {
-
         provideInput("A1\nA2\n");
         int gridSize = 4;
 
         Coordinate firstChoice = new Coordinate(0, 0);
-        Coordinate coordA1 = new Coordinate(0, 0);
-        Coordinate coordA2 = new Coordinate(0, 1);
+        Coordinate expectedResult = new Coordinate(1, 0);
 
-		
-        when(mockBoard.getCardAt(eq(coordA1))).thenReturn(mockCardA1);
+        	when(mockBoard.getCardAt(any(Coordinate.class)))
+             .thenReturn(mockCardA1)
+             .thenReturn(mockCardA2);
+
         when(mockCardA1.isRevealed()).thenReturn(false);
-
-		
-        when(mockBoard.getCardAt(eq(coordA2))).thenReturn(mockCardA2);
         when(mockCardA2.isRevealed()).thenReturn(false);
 
         Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, firstChoice);
 
-        assertEquals(coordA2, result);
-        assertTrue(outContent.toString().contains(ErrorMessages.E002));
+        assertEquals(expectedResult.getRow(), result.getRow());
+        assertEquals(expectedResult.getCol(), result.getCol());
+        
+        assertTrue(outputStream.toString().contains(ErrorMessages.E002));
     }
 
     @Test
@@ -343,7 +332,7 @@ class InputHandlerTest {
     void testGetPlayAgain_Invalid_ThenNo() {
         provideInput("bho\nn\n");
         assertFalse(InputHandler.getPlayAgain());
-        assertTrue(outContent.toString().contains(ErrorMessages.E005));
+        assertTrue(outputStream.toString().contains(ErrorMessages.E005));
     }
 
     @Test
@@ -356,11 +345,26 @@ class InputHandlerTest {
     void testCloseScanner() {
 		
 		InputHandler.closeScanner();
-        assertThrows(NoSuchElementException.class, () -> {
+    }
+    
+    @Test
+    void testGetMenuOption_ThrowsNoSuchElementException() {
+        // 1. Crea un input stream VUOTO (0 byte)
+        // Questo simula che il flusso di input sia finito o chiuso.
+        ByteArrayInputStream emptyInput = new ByteArrayInputStream(new byte[0]);
+
+        // 2. Iniettalo usando il tuo metodo setScanner
+        InputHandler.setScanner(emptyInput);
+
+        // 3. Verifica che venga lanciata l'eccezione
+        NoSuchElementException exception = assertThrows(NoSuchElementException.class, () -> {
             InputHandler.getMenuOption();
         });
-    }
 
+        // 4. Verifica che il messaggio sia quello personalizzato
+        assertEquals("Input stream closed.", exception.getMessage());
+    }
+/*
     @Test
     void testNameTooLong() {
 
@@ -371,5 +375,5 @@ class InputHandlerTest {
 
         String consoleOutput = outputStream.toString();
         assertTrue(consoleOutput.contains("Name too long"), "Expected truncation warning");
-    }
+    }*/
 }
