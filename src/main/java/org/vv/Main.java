@@ -38,7 +38,7 @@ public class Main {
             if (args[0].equals("-h") || args[0].equals("--help")) {
                 CliDisplay.showHelp();
                 return;
-            } else if (args[0].equals("-V") || args[0].equals("--version")) {
+            } else if (args[0].equals("-v") || args[0].equals("--version")) {
                 CliDisplay.showVersion();
                 return;
             }
