@@ -18,10 +18,18 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
 
+		public static void setupConsoleEncoding() throws UnsupportedEncodingException {
+			System.setOut(new PrintStream(System.out, true, "UTF-8"));
+		}
+		
+		public static void exit(int status) {
+			System.exit(status);
+		}
+
     public static void main(String[] args) {
 
-        try {
-            System.setOut(new PrintStream(System.out, true, "UTF-8"));
+		try {
+			setupConsoleEncoding();
         } catch (UnsupportedEncodingException e) {
             System.out.println("ERRORE: UTF-8 non supportato");
         }
@@ -142,7 +150,7 @@ public class Main {
                             numPlayers = p;
                         } else {
                             CliDisplay.showError(ErrorMessages.E009);
-                            System.exit(1);
+                            exit(1);
                         }
                     }
                 } else if (args[i].equals("-d") || args[i].equals("--difficulty")) {
@@ -152,7 +160,7 @@ public class Main {
                             difficulty = Difficulty.valueOf(diffStr);
                         } catch (IllegalArgumentException e) {
                             CliDisplay.showError(ErrorMessages.E008);
-                            System.exit(1);
+                            exit(1);
                         }
                     }
                 } else if (args[i].equals("-n") || args[i].equals("--name")) {
@@ -168,21 +176,21 @@ public class Main {
                     }
                 } else {
                     CliDisplay.showError(ErrorMessages.E010 + ": " + args[i]);
-                    System.exit(1);
+                    exit(1);
                 }
             }
 
             if (playerNames.size() > numPlayers) {
                 CliDisplay.showError(ErrorMessages.E007);
-                System.exit(1);
+                exit(1);
             }
 
         } catch (NumberFormatException e) {
             CliDisplay.showError(ErrorMessages.E009);
-            System.exit(1);
+            exit(1);
         } catch (Exception e) {
             CliDisplay.showError("Error generated in argument analisys: " + e.getMessage());
-            System.exit(1);
+            exit(1);
         }
 
         return new GameConfiguration(difficulty, numPlayers, playerNames);

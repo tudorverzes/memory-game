@@ -5,13 +5,18 @@ import org.vv.entity.ErrorMessages;
 import org.vv.entity.GameBoard;
 import org.vv.exception.*;
 
+import java.io.InputStream;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class InputHandler {
 
-	private static final Scanner scanner = new Scanner(System.in);
+	private static Scanner scanner = new Scanner(System.in);
 	private static final int MAX_ATTEMPTS = 5;
+
+	public static void setScanner(InputStream in) {
+        scanner = new Scanner(in, "UTF-8");
+    }
 
 	public static String getPlayerName(int playerNum, String defaultName) {
 		System.out.print("Insert player's name " + playerNum + " (default: " + defaultName + "): ");
