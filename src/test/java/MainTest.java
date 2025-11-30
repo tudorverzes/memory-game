@@ -11,11 +11,7 @@ import org.vv.boudary.InputHandler;
 import org.vv.Main;
 import org.vv.entity.GameConfiguration;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.security.Permission;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -348,6 +344,69 @@ class MainTest {
             // Should have created a process builder for "cmd /c cls"
             assertEquals(1, mockedPb.constructed().size());
 
+        } finally {
+            System.setProperty("os.name", originalOs);
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-41: Verify NumberFormatException handling in command line args")
+    void testParseCommandLineArgs_InvalidNumber() {
+        // -p followed by a non-integer string "two"
+        String[] args = {"-p", "two"};
+        assertThrows(ExitException.class, () -> Main.main(args));
+    }
+
+    @Test
+    @DisplayName("TC-M-42: Verify InterruptedException in Game Session")
+    void testRunGameSession_Interruption() {
+        String[] args = {"-p", "1"};
+
+        try (MockedConstruction<org.vv.boudary.Game> mockedGame = Mockito.mockConstruction(org.vv.boudary.Game.class,
+                (mock, context) -> {
+                    // Force the game run to throw InterruptedException
+                    // This triggers the catch block at line 95
+                    Mockito.doThrow(new InterruptedException()).when(mock).run();
+                })) {
+
+            Main.main(args);
+
+            // The catch block invokes Thread.currentThread().interrupt()
+            // We verify the interruption status was preserved
+            assertTrue(Thread.interrupted());
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-43: Verify clearConsole on Non-Windows (Linux/Mac)")
+    void testClearConsole_Linux() {
+        String originalOs = System.getProperty("os.name");
+        System.setProperty("os.name", "Linux");
+
+        try {
+            Main.clearConsole();
+            // Verify ANSI escape code for clearing screen
+            assertTrue(outContent.toString().contains("\033[H\033[2J"));
+        } finally {
+            System.setProperty("os.name", originalOs);
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-44: Verify Exception handling in clearConsole")
+    void testClearConsole_Exception() {
+        String originalOs = System.getProperty("os.name");
+        System.setProperty("os.name", "Windows 10");
+
+        try (MockedConstruction<ProcessBuilder> mockedPb = Mockito.mockConstruction(ProcessBuilder.class,
+                (mock, context) -> {
+                    // Force process start to fail, triggering catch block at line 212
+                    Mockito.when(mock.start()).thenThrow(new IOException("Simulated IO Error"));
+                })) {
+
+            Main.clearConsole();
+
+            assertTrue(errContent.toString().contains("Errore durante la pulizia della console"));
         } finally {
             System.setProperty("os.name", originalOs);
         }
