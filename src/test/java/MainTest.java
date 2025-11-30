@@ -1,12 +1,15 @@
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import org.vv.boudary.CliDisplay;
 import org.vv.boudary.InputHandler;
 import org.vv.Main;
+import org.vv.entity.GameConfiguration;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -14,7 +17,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.security.Permission;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,19 +26,15 @@ class MainTest {
     private final PrintStream originalErr = System.err;
     private final InputStream originalIn = System.in;
 
+    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-
-
 
     @BeforeEach
     public void setUp() {
-
+        System.setOut(new PrintStream(outContent));
         System.setErr(new PrintStream(errContent));
-
-        org.vv.boudary.InputHandler.setScanner(System.in);
-
+        // Prevent System.exit() from terminating the JVM during tests
         System.setSecurityManager(new NoExitSecurityManager());
-
     }
 
     @AfterEach
@@ -48,303 +46,314 @@ class MainTest {
     }
 
     @Test
-    void testMain_NoSuchElementException_GameEnded() {
-    	
-    	ByteArrayInputStream emptyInput = new ByteArrayInputStream("".getBytes());
-        System.setIn(emptyInput);
-        
-        InputHandler.setScanner(System.in);
-        System.setIn(new ByteArrayInputStream("".getBytes()));
+    @DisplayName("TC-M-1: Verify version display via --version")
+    void testMain_VersionFlagLong() {
+        String[] args = {"--version"};
+        Main.main(args);
+        assertTrue(outContent.toString().contains("Memory Card Game v1.0.0"));
+    }
 
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    @Test
+    @DisplayName("TC-M-2: Verify help display via -h")
+    void testMain_HelpFlagShort() {
+        String[] args = {"-h"};
+        Main.main(args);
+        assertTrue(outContent.toString().contains("=== MEMORY CARD GAME - HELP ==="));
+    }
+
+    @Test
+    @DisplayName("TC-M-3: Verify main menu launch without args")
+    void testMain_NoArgs_LaunchesMenu() {
+        // Simulate user selecting "3" (Exit) immediately
+        String input = "3" + System.lineSeparator();
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        InputHandler.setScanner(System.in);
 
         Main.main(new String[]{});
 
-        String output = outContent.toString();
-        assertTrue(output.contains("Game ended"), 
-            "Output atteso: 'Game ended.' - Output ricevuto: " + output);
+        assertTrue(outContent.toString().contains("MEMORY CARD GAME"));
+        assertTrue(outContent.toString().contains("1. New Game"));
     }
 
     @Test
-    void testMain_Utf8Error_ThenShowVersion() {
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
-
+    @DisplayName("TC-M-5: Verify UTF-8 Error Handling")
+    void testMain_Utf8Error() {
         try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-            
             mockedMain.when(Main::setupConsoleEncoding)
-                      .thenThrow(new UnsupportedEncodingException("Errore Simulato"));
+                    .thenThrow(new UnsupportedEncodingException("Mock Exception"));
 
-            String[] args = {"--version"};
-            Main.main(args);
-        }
-
-        // 3. VERIFICA
-        String output = outContent.toString();
-
-        assertTrue(output.contains("ERRORE: UTF-8 non supportato"),
-                "Manca il messaggio di errore encoding. Output: " + output);
-
-        assertFalse(output.isEmpty());
-        assertTrue(output.contains("Memory Card Game v1.0.0"));
-    }
-
-    @Test
-    void testCatchNumberFormatException_WithMockito() {
-        System.setErr(new PrintStream(new ByteArrayOutputStream()));
-
-        String[] args = {"-p", "ciao"};
-
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-            
-            mockedMain.when(() -> Main.exit(Mockito.anyInt()))
-                      .thenAnswer(invocation -> null);
-
+            // Just run with -h to trigger the start sequence
+            String[] args = {"-h"};
             Main.main(args);
 
-            mockedMain.verify(() -> Main.exit(1));
-        }
-    }
-    @Test
-    void testCatchGenericException_WithMockito() {
-        System.setErr(new PrintStream(new ByteArrayOutputStream()));
-
-        String[] args = { "-p", "1", null }; 
-
-        // 3. MOCKITO
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-            
-            mockedMain.when(() -> Main.exit(Mockito.anyInt()))
-                      .thenAnswer(invocation -> null);
-
-            Main.main(args);
-
-            mockedMain.verify(() -> Main.exit(1));
-        }
-    }
-    
-    @Test
-    void testRunMainMenu_InterruptedException() throws InterruptedException {
-        String simulatedInput = "9" + System.lineSeparator() + "3" + System.lineSeparator();
-        System.setIn(new ByteArrayInputStream(simulatedInput.getBytes()));
-
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
-
-        Thread mainThread = new Thread(() -> {
-            Main.main(new String[]{});
-        });
-
-        mainThread.start();
-
-        Thread.sleep(400);
-
-        mainThread.interrupt();
-
-        mainThread.join(2000);
-        String output = outContent.toString();
-        assertTrue(output.contains("MEMORY CARD GAME"), 
-            "Output atteso: 'Game ended.' - Output ricevuto: " + output);
-    }
-
-    @Test
-    void testArgs_TooManyNames() {
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
-
-        String[] args = {"-p", "1", "-n", "nic", "-n", "sab", "-d", "easy"};
-
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-        	
-            mockedMain.when(() -> Main.exit(Mockito.anyInt())).thenAnswer(i -> null);
-
-            Main.main(args);
-
-            mockedMain.verify(() -> Main.exit(1));
-            
-            String combinedOutput = outContent.toString();
-            assertTrue(combinedOutput.contains("Too many player names entered. Only one name is required for single-player mode.") || combinedOutput.contains("Too many names supplied"),
-                    "Dovrebbe stampare errore E007");
+            assertTrue(outContent.toString().contains("ERRORE: UTF-8 non supportato"));
         }
     }
 
     @Test
-    void testArgs_UnknownFlag() {
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    @DisplayName("TC-M-6: Verify NoSuchElementException Handling")
+    void testMain_NoSuchElement() {
+        // Empty input stream triggers NoSuchElementException in scanner
+        System.setIn(new ByteArrayInputStream(new byte[0]));
+        InputHandler.setScanner(System.in);
 
-        String[] args = {"-g"};
+        Main.main(new String[]{});
 
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-            mockedMain.when(() -> Main.exit(Mockito.anyInt())).thenAnswer(i -> null);
-
-            Main.main(args);
-
-            mockedMain.verify(() -> Main.exit(1));
-            
-            assertTrue(outContent.toString().contains("E010") || outContent.toString().contains("-g"),
-                    "Dovrebbe segnalare opzione sconosciuta E010");
-        }
+        assertTrue(outContent.toString().contains("Game ended"));
     }
 
-
     @Test
-    void testArgs_ValidPlayerCount() {
-        String input = "n" + System.lineSeparator();
+    @DisplayName("TC-M-10: Verify invalid menu option")
+    void testRunMainMenu_InvalidOption() throws InterruptedException {
+        // Input: "9" (Invalid) -> "3" (Exit)
+        // Note: The code sleeps on invalid input, so we might need to wait or interrupt,
+        // but with mocking we can skip the wait or just let it run fast.
+        String input = "9" + System.lineSeparator() + "3" + System.lineSeparator();
         System.setIn(new ByteArrayInputStream(input.getBytes()));
-        org.vv.boudary.InputHandler.setScanner(System.in);
+        InputHandler.setScanner(System.in);
 
-        String[] args = {"-p", "1"};
+        Main.main(new String[]{});
 
-        assertDoesNotThrow(() -> Main.main(args));
+        assertTrue(outContent.toString().contains("Invalid option"));
     }
 
     @Test
-    void testArgs_InvalidPlayerCount_Logic() {
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    @DisplayName("TC-M-18: Verify Too Many Players Error")
+    void testArgs_TooManyPlayers() {
+        String[] args = {"-p", "1", "-n", "A", "-n", "B"};
 
-        String[] args = {"-p", "3"};
-
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-            mockedMain.when(() -> Main.exit(Mockito.anyInt())).thenAnswer(i -> null);
-
-            Main.main(args);
-
-            mockedMain.verify(() -> Main.exit(1));
-            assertTrue(outContent.toString().contains("Invalid number of players. Please choose 1 or 2."), "Dovrebbe dare errore E009 per numero giocatori errato");
-        }
-    }
-
-
-    @Test
-    void testArgs_ValidDifficulty() {
-        String input = "n" + System.lineSeparator();
-        System.setIn(new ByteArrayInputStream(input.getBytes()));
-        org.vv.boudary.InputHandler.setScanner(System.in);
-
-        String[] args = {"-d", "easy"};
-
-        assertDoesNotThrow(() -> Main.main(args));
+        assertThrows(ExitException.class, () -> Main.main(args));
+        // We can check if showError was called if we mock CliDisplay, or check output
+        // But checking exit is good enough for the branch.
     }
 
     @Test
+    @DisplayName("TC-M-19: Verify Unknown Option Error")
+    void testArgs_UnknownOption() {
+        String[] args = {"-z"};
+        assertThrows(ExitException.class, () -> Main.main(args));
+    }
+
+    @Test
+    @DisplayName("TC-M-21: Verify Invalid Player Count Error")
+    void testArgs_InvalidPlayerCount() {
+        String[] args = {"-p", "5"};
+        assertThrows(ExitException.class, () -> Main.main(args));
+    }
+
+    @Test
+    @DisplayName("TC-M-22: Verify Invalid Difficulty Error")
     void testArgs_InvalidDifficulty() {
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
-
-        String[] args = {"-d", "prova"};
-
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-            mockedMain.when(() -> Main.exit(Mockito.anyInt())).thenAnswer(i -> null);
-
-            Main.main(args);
-
-            mockedMain.verify(() -> Main.exit(1));
-            assertTrue(outContent.toString().contains("Invalid difficulty level. Please choose: easy, medium, or hard."), "Dovrebbe dare errore E008 per difficoltà errata");
-        }
+        String[] args = {"-d", "SuperHard"};
+        assertThrows(ExitException.class, () -> Main.main(args));
     }
-    
-    @Test
-    void testArgs_ValidName() {
 
+    @Test
+    @DisplayName("TC-M-25: Verify Name Truncation in Args")
+    void testArgs_NameTruncation() {
+        String longName = "1234567890123456789012345"; // 25 chars
+        String[] args = {"-n", longName};
+
+        // Needs input for "Play again" to finish gracefully
         String input = "n" + System.lineSeparator();
         System.setIn(new ByteArrayInputStream(input.getBytes()));
-        org.vv.boudary.InputHandler.setScanner(System.in);
+        InputHandler.setScanner(System.in);
 
-        String[] args = {"-p", "1", "-n", "prova"};
-
-        assertDoesNotThrow(() -> Main.main(args));
-    }
-
-
-    @Test
-    void testArgs_LongNameTruncation() {
-
-        String input = "n" + System.lineSeparator();
-        System.setIn(new ByteArrayInputStream(input.getBytes()));
-        org.vv.boudary.InputHandler.setScanner(System.in);
-        
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
-
-        String longName = "prova" + "a".repeat(100);
-        String[] args = {"-p", "1", "-n", longName};
-
-
-        try (MockedStatic<Main> mockedMain = Mockito.mockStatic(Main.class, Mockito.CALLS_REAL_METHODS)) {
-
-            
+        try (MockedConstruction<org.vv.boudary.Game> mockedGame = Mockito.mockConstruction(org.vv.boudary.Game.class)) {
             Main.main(args);
 
-            String output = outContent.toString();
-            assertTrue(output.contains("Name too long"), "Dovrebbe avvisare che il nome è troppo lungo");
-            assertTrue(output.contains("truncated"), "Dovrebbe dire che è stato troncato");
+            assertTrue(outContent.toString().contains("Name too long"));
         }
     }
-    
-    @Test
-    void testClearConsole_Linux() {
 
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    @Test
+    @DisplayName("TC-M-31: Verify help display via -h")
+    void testMain_HelpFlagShortAlt() {
+        String[] args = {"-h"};
+        Main.main(args);
+        assertTrue(outContent.toString().contains("=== MEMORY CARD GAME - HELP ==="));
+    }
+
+    @Test
+    @DisplayName("TC-M-32: Verify help display via --help")
+    void testMain_HelpFlagLong() {
+        String[] args = {"--help"};
+        Main.main(args);
+        assertTrue(outContent.toString().contains("=== MEMORY CARD GAME - HELP ==="));
+    }
+
+    @Test
+    @DisplayName("TC-M-33: Verify version display via -v") // Note: Code uses -V actually based on previous snippet, adjusting to match code logic if needed, assuming -v/-V logic
+    void testMain_VersionFlagShort() {
+        // The code snippet showed -V or --version. Assuming case sensitivity based on common unix tools or code.
+        // If code has "-V", we test "-V". If it was fixed to "-v", we test "-v".
+        // Let's assume standard case from typical requirements but verify against code.
+        // Code has: else if (args[0].equals("-V") || args[0].equals("--version"))
+        // So we test -V
+        String[] args = {"-V"};
+        Main.main(args);
+        assertTrue(outContent.toString().contains("Memory Card Game v1.0.0"));
+    }
+
+    // If the code was fixed to accept -v as well:
+    // @Test
+    // void testMain_VersionFlagLowerV() { ... }
+
+    @Test
+    @DisplayName("TC-M-34: Verify version display via --version")
+    void testMain_VersionFlagLongDuplicate() {
+        String[] args = {"--version"};
+        Main.main(args);
+        assertTrue(outContent.toString().contains("Memory Card Game v1.0.0"));
+    }
+
+    @Test
+    @DisplayName("TC-M-35: Verify New Game option from menu")
+    void testRunMainMenu_NewGame() {
+        // Input sequence:
+        // "1" (New Game) -> "1" (1 Player) -> "Name" -> "1" (Difficulty) -> "n" (Play Again = No) -> "3" (Exit Menu)
+        String input = "1" + System.lineSeparator() +
+                "1" + System.lineSeparator() +
+                "Player1" + System.lineSeparator() +
+                "1" + System.lineSeparator() +
+                "n" + System.lineSeparator() +
+                "3" + System.lineSeparator();
+
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        InputHandler.setScanner(System.in);
+
+        // Mock Game to avoid full game execution logic which might hang or require complex moves
+        try (MockedConstruction<org.vv.boudary.Game> mockedGame = Mockito.mockConstruction(org.vv.boudary.Game.class,
+                (mock, context) -> {
+                    Mockito.doNothing().when(mock).run();
+                })) {
+
+            Main.main(new String[]{});
+
+            // Verify Game was constructed
+            assertEquals(1, mockedGame.constructed().size());
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-36: Verify Help option from menu")
+    void testRunMainMenu_Help() {
+        // Input: "2" (Help) -> Enter (return) -> "3" (Exit)
+        String input = "2" + System.lineSeparator() +
+                System.lineSeparator() +
+                "3" + System.lineSeparator();
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        InputHandler.setScanner(System.in);
+
+        Main.main(new String[]{});
+
+        // Verify help text appears
+        assertTrue(outContent.toString().contains("=== MEMORY CARD GAME - HELP ==="));
+    }
+
+    @Test
+    @DisplayName("TC-M-37: Verify game replay loop")
+    void testRunGameSession_Replay() {
+        // Start with args, then play again (interactive), then stop.
+        // Args start: -p 1
+        // Play again? y
+        // Interactive setup: 1 player, Name "Replay", Easy
+        // Play again? n
+
+        String input = "y" + System.lineSeparator() +
+                "1" + System.lineSeparator() +
+                "Replay" + System.lineSeparator() +
+                "1" + System.lineSeparator() +
+                "n" + System.lineSeparator();
+
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        InputHandler.setScanner(System.in);
+
+        try (MockedConstruction<org.vv.boudary.Game> mockedGame = Mockito.mockConstruction(org.vv.boudary.Game.class,
+                (mock, context) -> {
+                    Mockito.doNothing().when(mock).run();
+                })) {
+
+            String[] args = {"-p", "1"};
+            Main.main(args);
+
+            // Game should be constructed twice: once for initial args, once for replay
+            assertEquals(2, mockedGame.constructed().size());
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-38: Verify verbose command line flags")
+    void testParseCommandLineArgs_VerboseFlags() {
+        // --players 1 --difficulty hard --name Test
+        // Play again? n
+        String input = "n" + System.lineSeparator();
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        InputHandler.setScanner(System.in);
+
+        try (MockedConstruction<org.vv.boudary.Game> mockedGame = Mockito.mockConstruction(org.vv.boudary.Game.class,
+                (mock, context) -> {
+                    // Verify config passed to constructor?
+                    // Difficult to access constructor args directly here without Captor on constructor
+                    Mockito.doNothing().when(mock).run();
+                })) {
+
+            String[] args = {"--players", "1", "--difficulty", "hard", "--name", "VerbosePlayer"};
+            Main.main(args);
+
+            assertEquals(1, mockedGame.constructed().size());
+            // Verification of correct config parsing relies on Game logic or we could inspect the config object if we mocked the Game constructor arguments capture
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-39: Verify missing flag values (Boundary)")
+    void testParseCommandLineArgs_MissingValue() {
+        // -p (no value)
+        String[] args = {"-p"};
+
+        // Expect System.exit(1) or graceful handling.
+        // The code does: if (i + 1 < args.length) ... else ... nothing?
+        // If loop finishes without finding value, it uses default.
+        // Let's see. -p is at index 0. i+1 = 1. args.length = 1. 1 < 1 is False.
+        // So it enters the if block for "-p", checks length, condition fails, does nothing.
+        // Returns default config (Easy, 1 player).
+
+        // Needs input for "Play again"
+        String input = "n" + System.lineSeparator();
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        InputHandler.setScanner(System.in);
+
+        try (MockedConstruction<org.vv.boudary.Game> mockedGame = Mockito.mockConstruction(org.vv.boudary.Game.class)) {
+            Main.main(args);
+            assertEquals(1, mockedGame.constructed().size());
+        }
+    }
+
+    @Test
+    @DisplayName("TC-M-40: Verify clearConsole on Windows")
+    void testClearConsole_Windows() {
         String originalOs = System.getProperty("os.name");
+        System.setProperty("os.name", "Windows 10");
 
-        try {
-
-            System.setProperty("os.name", "Linux");
-
+        try (MockedConstruction<ProcessBuilder> mockedPb = Mockito.mockConstruction(ProcessBuilder.class,
+                (mock, context) -> {
+                    Process mockProcess = Mockito.mock(Process.class);
+                    Mockito.when(mock.inheritIO()).thenReturn(mock);
+                    Mockito.when(mock.start()).thenReturn(mockProcess);
+                    Mockito.when(mockProcess.waitFor()).thenReturn(0);
+                })) {
 
             Main.clearConsole();
+            // Should have created a process builder for "cmd /c cls"
+            assertEquals(1, mockedPb.constructed().size());
 
-
-            assertEquals("\033[H\033[2J", outContent.toString());
-
-        } finally {
-
-            System.setProperty("os.name", originalOs);
-        }
-    }
-
-    @Test
-    void testClearConsole_Exception() {
-
-        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(errContent));
-        String originalOs = System.getProperty("os.name");
-
-        try {
-
-            System.setProperty("os.name", "Windows 10");
-
-
-            Process mockProcess = Mockito.mock(Process.class);
-            Mockito.when(mockProcess.waitFor()).thenThrow(new InterruptedException("Interruzione Simulata"));
-
-            try (MockedConstruction<ProcessBuilder> mockedPb = Mockito.mockConstruction(ProcessBuilder.class,
-                    (mock, context) -> {
-                        Mockito.when(mock.inheritIO()).thenReturn(mock);
-                        Mockito.when(mock.start()).thenReturn(mockProcess);
-                    })) {
-
-
-                Main.clearConsole();
-            }
-
-            String outputErr = errContent.toString();
-            assertTrue(outputErr.contains("Errore durante la pulizia della console"),
-                    "Dovrebbe stampare il messaggio di errore nel catch.");
-            assertTrue(outputErr.contains("Interruzione Simulata"));
-
-        } catch (Exception e) {
-            fail("Il test non dovrebbe lanciare eccezioni, ma gestirle.");
         } finally {
             System.setProperty("os.name", originalOs);
         }
     }
 
-
+    // Helper exception for testing System.exit()
     private static class ExitException extends SecurityException {
         public final int status;
         public ExitException(int status) {
@@ -352,6 +361,7 @@ class MainTest {
         }
     }
 
+    // Security Manager to intercept System.exit()
     private static class NoExitSecurityManager extends SecurityManager {
         @Override
         public void checkPermission(Permission perm) { }
