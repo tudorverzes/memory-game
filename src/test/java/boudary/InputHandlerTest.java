@@ -198,4 +198,11 @@ class InputHandlerTest {
     void testCloseScanner() {
         assertDoesNotThrow(InputHandler::closeScanner);
     }
+
+    @Test
+    @DisplayName("TC-INP-15: Verify MaxAttemptsExceededException in getPlayerCount")
+    void testGetPlayerCount_MaxAttempts() {
+        setInput("3\nabc\n3\nabc\n3\n"); // 5 invalid inputs
+        assertThrows(MaxAttemptsExceededException.class, InputHandler::getPlayerCount);
+    }
 }
