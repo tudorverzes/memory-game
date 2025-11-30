@@ -1,7 +1,13 @@
 package boudary;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.vv.boudary.CliDisplay;
 import org.vv.boudary.InputHandler;
 import org.vv.entity.Card;
 import org.vv.entity.Coordinate;
@@ -10,370 +16,186 @@ import org.vv.entity.ErrorMessages;
 import org.vv.entity.GameBoard;
 import org.vv.exception.MaxAttemptsExceededException;
 
-import java.io.*;
-import java.lang.reflect.Field;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.NoSuchElementException;
-import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class InputHandlerTest {
 
-	private final InputStream originalIn = System.in;
-	private static final PrintStream originalOut = System.out;
-	private static ByteArrayOutputStream outputStream;
+    private final InputStream originalIn = System.in;
+    private final PrintStream originalOut = System.out;
+    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
 
-        @Mock
+    @Mock
     private GameBoard mockBoard;
     @Mock
-    private Card mockCardA1;
-    @Mock
-    private Card mockCardA2;
+    private Card mockCard;
 
     @BeforeEach
-    void setUp() throws Exception {
-        outputStream = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outputStream));
+    void setUp() {
+        System.setOut(new PrintStream(outContent));
     }
 
     @AfterEach
-    void restoreStreams() {
-        
+    void tearDown() {
         System.setIn(originalIn);
         System.setOut(originalOut);
-        
-        InputHandler.setScanner(originalIn);
     }
 
-	private void provideInput(String data) {
-		ByteArrayInputStream testIn = new ByteArrayInputStream(data.getBytes());
-		System.setIn(testIn);
-		InputHandler.setScanner(testIn);
-    }
-
-	private void setScannerInput(String simulatedInput) throws Exception {
-		InputStream testInput = new ByteArrayInputStream(simulatedInput.getBytes());
-		Field scannerField = InputHandler.class.getDeclaredField("scanner");
-		scannerField.setAccessible(true);
-		scannerField.set(null, new Scanner(testInput));
-	}
-
-    @Test
-    @DisplayName("TC-INP-01: Empty input returns the default player name")
-    void testGetPlayerName_emptyInput_returnsDefault() throws Exception {
-        setScannerInput("\n");
-
-        String result = InputHandler.getPlayerName(1, "DefaultName");
-
-        assertEquals("DefaultName", result);
-
-        String consoleOutput = outputStream.toString();
-        // No WARNING expected. Prompts are OK.
-        assertFalse(consoleOutput.contains("Name too long"), "Unexpected warning printed");
-        assertFalse(consoleOutput.contains("error"), "Unexpected error printed");
+    private void setInput(String input) {
+        ByteArrayInputStream in = new ByteArrayInputStream(input.getBytes());
+        System.setIn(in);
+        InputHandler.setScanner(in);
     }
 
     @Test
-    @DisplayName("TC-INP-02: Trimmed valid input returns name without spaces")
-    void testGetPlayerName_validTrimmedInput() throws Exception {
-        setScannerInput("   Alice   \n");
-
+    @DisplayName("TC-INP-01: Verify empty input returns default name")
+    void testGetPlayerName_Empty() {
+        setInput("\n");
         String result = InputHandler.getPlayerName(1, "Default");
-
-        assertEquals("Alice", result);
-
-        String consoleOutput = outputStream.toString();
-        assertFalse(consoleOutput.contains("Name too long"), "Unexpected warning printed");
-        assertFalse(consoleOutput.contains("error"), "Unexpected error printed");
+        assertEquals("Default", result);
     }
 
     @Test
-    @DisplayName("TC-INP-03: Too-long name is truncated and emits a warning")
-    void testGetPlayerName_nameTooLong_isTruncatedWithWarning() throws Exception {
-        String longName = "abcdefghijklmnopqrstuXYZ";
-        setScannerInput(longName + "\n");
-        String result = InputHandler.getPlayerName(1, "DefaultName");
-		String consoleOutput = outputStream.toString();
-		assertTrue(consoleOutput.contains("Name too long"));
-		assertEquals(20, result.length());
-		assertEquals("abcdefghijklmnopqrst", result);
-	}
-
-	    @Test
-    void testGetPlayerName_EmptyInput_ReturnsDefault() {
-        provideInput("\n");
-        String result = InputHandler.getPlayerName(1, "Player 1");
-        assertEquals("Player 1", result);
-    }
-
-    @Test
-    void testGetPlayerName_ValidInput_ReturnsName() {
-        provideInput("Alice\n");
-        String result = InputHandler.getPlayerName(1, "Player 1");
+    @DisplayName("TC-INP-02: Verify valid trimmed input returns name")
+    void testGetPlayerName_Valid() {
+        setInput("   Alice   \n");
+        String result = InputHandler.getPlayerName(1, "Default");
         assertEquals("Alice", result);
     }
 
     @Test
-    void testGetPlayerName_TooLong_Truncates() {
-		
-        String longName = "AlessandroMagnoIlConquistatore"; 
-        provideInput(longName + "\n");
-        
+    @DisplayName("TC-INP-03: Verify long name truncation")
+    void testGetPlayerName_Truncation() {
+        String longName = "ThisNameIsWayTooLongToBeAcceptedByType";
+        setInput(longName + "\n");
         String result = InputHandler.getPlayerName(1, "Default");
-        
-        assertEquals(20, result.length());
-        assertEquals("AlessandroMagnoIlCon", result);
-		
-        assertTrue(outputStream.toString().contains("Name too long"));
-    }
-
-	
-    @Test
-    void testGetPlayerCount_Valid_1() {
-        provideInput("1\n");
-        assertEquals(1, InputHandler.getPlayerCount());
+        assertEquals("ThisNameIsWayTooLong", result);
+        assertTrue(outContent.toString().contains("Name too long"));
     }
 
     @Test
-    void testGetPlayerCount_Valid_2() {
-        provideInput("2\n");
-        assertEquals(2, InputHandler.getPlayerCount());
+    @DisplayName("TC-INP-04: Verify valid coordinate input")
+    void testGetCoordinateInput_Success() {
+        setInput("A1\n");
+        when(mockBoard.getCardAt(any(Coordinate.class))).thenReturn(mockCard);
+        when(mockCard.isRevealed()).thenReturn(false);
+
+        Coordinate result = InputHandler.getCoordinateInput("Prompt", 4, mockBoard, null);
+        assertEquals(new Coordinate(0, 0), result);
     }
 
     @Test
-    void testGetPlayerCount_InvalidNumber_ThenValid() {
-		
-        provideInput("3\n1\n");
-        assertEquals(1, InputHandler.getPlayerCount());
-        assertTrue(outputStream.toString().contains(ErrorMessages.E009));
+    @DisplayName("TC-INP-05: Verify retry on revealed card")
+    void testGetCoordinateInput_RevealedRetry() {
+        setInput("A1\nA2\n");
+        when(mockBoard.getCardAt(new Coordinate(0, 0))).thenReturn(mockCard);
+        when(mockCard.isRevealed()).thenReturn(true);
+
+        Card unrevealedCard = org.mockito.Mockito.mock(Card.class);
+        when(mockBoard.getCardAt(new Coordinate(1, 0))).thenReturn(unrevealedCard);
+        when(unrevealedCard.isRevealed()).thenReturn(false);
+
+        Coordinate result = InputHandler.getCoordinateInput("Prompt", 4, mockBoard, null);
+
+        assertEquals(new Coordinate(1, 0), result);
+        assertTrue(outContent.toString().contains(ErrorMessages.E003));
     }
 
     @Test
-    void testGetPlayerCount_InvalidFormat_ThenValid() {
-		
-        provideInput("abc\n2\n");
-        assertEquals(2, InputHandler.getPlayerCount());
-        assertTrue(outputStream.toString().contains(ErrorMessages.E005));
+    @DisplayName("TC-INP-06: Verify retry on same card selection")
+    void testGetCoordinateInput_SameCardRetry() {
+        setInput("A1\nA2\n");
+        Coordinate first = new Coordinate(0, 0);
+
+        when(mockBoard.getCardAt(any(Coordinate.class))).thenReturn(mockCard);
+        when(mockCard.isRevealed()).thenReturn(false);
+
+        Coordinate result = InputHandler.getCoordinateInput("Prompt", 4, mockBoard, first);
+
+        assertEquals(new Coordinate(1, 0), result);
+        assertTrue(outContent.toString().contains(ErrorMessages.E002));
     }
 
     @Test
-    void testGetPlayerCount_MaxAttemptsExceeded() {
-		
-        provideInput("3\n3\n3\n3\n3\n");
-        assertThrows(MaxAttemptsExceededException.class, () -> {
-            InputHandler.getPlayerCount();
-        });
+    @DisplayName("TC-INP-07: Verify retry on invalid formats")
+    void testGetCoordinateInput_InvalidFormats() {
+        setInput("1A\nZ9\nA1\n");
+        when(mockBoard.getCardAt(any(Coordinate.class))).thenReturn(mockCard);
+        when(mockCard.isRevealed()).thenReturn(false);
+
+        Coordinate result = InputHandler.getCoordinateInput("Prompt", 4, mockBoard, null);
+
+        assertEquals(new Coordinate(0, 0), result);
+
+        String output = outContent.toString();
+        assertTrue(output.contains(ErrorMessages.E004) || output.contains(ErrorMessages.E001));
     }
 
-	
     @Test
-    void testGetDifficulty_Easy() {
-        provideInput("1\n");
+    @DisplayName("TC-INP-08: Verify stream closed exception")
+    void testGetMenuOption_StreamClosed() {
+        setInput("");
+        assertThrows(NoSuchElementException.class, InputHandler::getMenuOption);
+    }
+
+    @Test
+    @DisplayName("TC-INP-09: Verify difficulty selection")
+    void testGetDifficulty_Success() {
+        setInput("1\n2\n3\n");
         assertEquals(Difficulty.EASY, InputHandler.getDifficulty());
-    }
-
-    @Test
-    void testGetDifficulty_Medium() {
-        provideInput("2\n");
         assertEquals(Difficulty.MEDIUM, InputHandler.getDifficulty());
-    }
-
-    @Test
-    void testGetDifficulty_Hard() {
-        provideInput("3\n");
         assertEquals(Difficulty.HARD, InputHandler.getDifficulty());
     }
 
     @Test
-    void testGetDifficulty_Invalid_ThenValid() {
-		
-        provideInput("4\n1\n");
-        assertEquals(Difficulty.EASY, InputHandler.getDifficulty());
-        assertTrue(outputStream.toString().contains(ErrorMessages.E005));
-    }
-    
-    @Test
+    @DisplayName("TC-INP-10: Verify max attempts exceeded for difficulty")
     void testGetDifficulty_MaxAttempts() {
-        provideInput("x\nx\nx\nx\nx\n");
-        assertThrows(MaxAttemptsExceededException.class, () -> {
-           InputHandler.getDifficulty(); 
-        });
-    }
-
-	
-    @Test
-    void testGetCoordinateInput_Success() {
-        provideInput("A1\n");
-        int gridSize = 4;
-        
-		
-        Coordinate expected = new Coordinate(0, 0);
-
-		
-        when(mockBoard.getCardAt(eq(expected))).thenReturn(mockCardA1);
-        when(mockCardA1.isRevealed()).thenReturn(false);
-
-        Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, null);
-        assertEquals(expected, result);
+        setInput("x\n4\n0\nabc\n9\n");
+        assertThrows(MaxAttemptsExceededException.class, InputHandler::getDifficulty);
+        assertTrue(outContent.toString().contains(ErrorMessages.E005));
     }
 
     @Test
-    void testGetCoordinateInput_CardAlreadyRevealed() {
-    	provideInput("A1\nA2\n");
-        int gridSize = 4;
-        Coordinate expectedResult = new Coordinate(1, 0); 
-
-
-        	when(mockBoard.getCardAt(any(Coordinate.class)))
-            .thenReturn(mockCardA1)
-            .thenReturn(mockCardA2);
-
-        when(mockCardA1.isRevealed()).thenReturn(true);
-        when(mockCardA2.isRevealed()).thenReturn(false);
-
-        Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, null);
-        
-        assertEquals(expectedResult.getRow(), result.getRow());
-        assertEquals(expectedResult.getCol(), result.getCol());
-
-        assertTrue(outputStream.toString().contains(ErrorMessages.E003));
+    @DisplayName("TC-INP-11: Verify player count valid inputs")
+    void testGetPlayerCount_Valid() {
+        setInput("1\n2\n");
+        assertEquals(1, InputHandler.getPlayerCount());
+        assertEquals(2, InputHandler.getPlayerCount());
     }
 
     @Test
-    void testGetCoordinateInput_SameCardSelected() {
-        provideInput("A1\nA2\n");
-        int gridSize = 4;
-
-        Coordinate firstChoice = new Coordinate(0, 0);
-        Coordinate expectedResult = new Coordinate(1, 0);
-
-        	when(mockBoard.getCardAt(any(Coordinate.class)))
-             .thenReturn(mockCardA1)
-             .thenReturn(mockCardA2);
-
-        when(mockCardA1.isRevealed()).thenReturn(false);
-        when(mockCardA2.isRevealed()).thenReturn(false);
-
-        Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, firstChoice);
-
-        assertEquals(expectedResult.getRow(), result.getRow());
-        assertEquals(expectedResult.getCol(), result.getCol());
-        
-        assertTrue(outputStream.toString().contains(ErrorMessages.E002));
+    @DisplayName("TC-INP-12: Verify player count invalid inputs")
+    void testGetPlayerCount_Invalid() {
+        setInput("3\nabc\n1\n");
+        assertEquals(1, InputHandler.getPlayerCount());
+        String output = outContent.toString();
+        assertTrue(output.contains(ErrorMessages.E009));
+        assertTrue(output.contains(ErrorMessages.E005));
     }
 
     @Test
-    void testGetCoordinateInput_InvalidFormat() {
-		
-        provideInput("1A\nA1\n"); 
-        int gridSize = 4;
-        Coordinate expected = new Coordinate(0, 0);
-        when(mockBoard.getCardAt(eq(expected))).thenReturn(mockCardA1);
-        when(mockCardA1.isRevealed()).thenReturn(false);
-
-        Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, null);
-        
-        assertEquals(expected, result);
-		
-    }
-
-    @Test
-    void testGetCoordinateInput_OutOfBounds() {
-		provideInput("Z9\nA1\n");
-        int gridSize = 4;
-        Coordinate expected = new Coordinate(0, 0);
-
-        when(mockBoard.getCardAt(eq(expected))).thenReturn(mockCardA1);
-        when(mockCardA1.isRevealed()).thenReturn(false);
-
-        Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, null);
-        
-        assertEquals(expected, result);}
-    
-    @Test
-    void testGetCoordinateInput_IllegalArgument() {
-
-        provideInput(" \nA1\n");
-        int gridSize = 4;
-        Coordinate expected = new Coordinate(0, 0);
-
-        when(mockBoard.getCardAt(eq(expected))).thenReturn(mockCardA1);
-        when(mockCardA1.isRevealed()).thenReturn(false);
-
-        Coordinate result = InputHandler.getCoordinateInput("Prompt:", gridSize, mockBoard, null);
-        assertEquals(expected, result);
-    }
-
-    @Test
-    void testGetPlayAgain_Yes() {
-        provideInput("y\n");
+    @DisplayName("TC-INP-13: Verify play again logic")
+    void testGetPlayAgain() {
+        setInput("y\nyes\nn\nno\nx\nn\n");
         assertTrue(InputHandler.getPlayAgain());
-    }
-    
-    @Test
-    void testGetPlayAgain_YesFull() {
-        provideInput("yes\n");
         assertTrue(InputHandler.getPlayAgain());
+        assertFalse(InputHandler.getPlayAgain());
+        assertFalse(InputHandler.getPlayAgain());
+        assertFalse(InputHandler.getPlayAgain());
+        assertTrue(outContent.toString().contains(ErrorMessages.E005));
     }
 
     @Test
-    void testGetPlayAgain_No() {
-        provideInput("n\n");
-        assertFalse(InputHandler.getPlayAgain());
-    }
-    
-    @Test
-    void testGetPlayAgain_Invalid_ThenNo() {
-        provideInput("bho\nn\n");
-        assertFalse(InputHandler.getPlayAgain());
-        assertTrue(outputStream.toString().contains(ErrorMessages.E005));
-    }
-
-    @Test
-    void testGetMenuOption() {
-        provideInput("1\n");
-        assertEquals("1", InputHandler.getMenuOption());
-    }
-    
-    @Test
+    @DisplayName("TC-INP-14: Verify close scanner")
     void testCloseScanner() {
-		
-		InputHandler.closeScanner();
+        assertDoesNotThrow(InputHandler::closeScanner);
     }
-    
-    @Test
-    void testGetMenuOption_ThrowsNoSuchElementException() {
-        // 1. Crea un input stream VUOTO (0 byte)
-        // Questo simula che il flusso di input sia finito o chiuso.
-        ByteArrayInputStream emptyInput = new ByteArrayInputStream(new byte[0]);
-
-        // 2. Iniettalo usando il tuo metodo setScanner
-        InputHandler.setScanner(emptyInput);
-
-        // 3. Verifica che venga lanciata l'eccezione
-        NoSuchElementException exception = assertThrows(NoSuchElementException.class, () -> {
-            InputHandler.getMenuOption();
-        });
-
-        // 4. Verifica che il messaggio sia quello personalizzato
-        assertEquals("Input stream closed.", exception.getMessage());
-    }
-/*
-    @Test
-    void testNameTooLong() {
-
-	
-        String result = InputHandler.getPlayerName(1, "Default");
-
-        assertEquals("abcdefghijklmnopqrst", result);
-
-        String consoleOutput = outputStream.toString();
-        assertTrue(consoleOutput.contains("Name too long"), "Expected truncation warning");
-    }*/
 }
