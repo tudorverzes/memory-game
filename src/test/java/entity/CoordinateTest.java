@@ -105,6 +105,13 @@ class CoordinateTest {
     }
 
     @Test
+    @DisplayName("[TC-CO-015] equals() should return true for the same object instance (reflexivity)")
+    void testEqualsSameInstance() {
+        Coordinate coord = new Coordinate(5, 5);
+        assertEquals(coord, coord, "An object must be equal to itself.");
+    }
+
+    @Test
     @DisplayName("[TC-CO-013] equals() should be robust against null and different types")
     void testEqualsRobustness() {
         Coordinate coord = new Coordinate(1, 1);
