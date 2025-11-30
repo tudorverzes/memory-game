@@ -111,6 +111,7 @@ class CoordinateTest {
         assertEquals(coord, coord, "An object must be equal to itself.");
     }
 
+
     @Test
     @DisplayName("[TC-CO-013] equals() should be robust against null and different types")
     void testEqualsRobustness() {
