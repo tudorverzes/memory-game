@@ -1,3 +1,5 @@
+#These tests must be run manually from terminal after running the junit tests and saving the test output in .exec format
+
 $TestName = "main"
 java -javaagent:"C:\Program Files\Jacoco\lib\jacocoagent.jar=destfile=test_$TestName.exec,includes=org.vv.*" -cp bin\main org.vv.Main --version
 java -javaagent:"C:\Program Files\Jacoco\lib\jacocoagent.jar=destfile=test_$TestName.exec,includes=org.vv.*" -cp bin\main org.vv.Main -p 2 -n prova1 -n prova2 -d easy
