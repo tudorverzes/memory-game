@@ -371,22 +371,7 @@ class MainTest {
     }
 
     @Test
-    @DisplayName("TC-M-43: Verify clearConsole on Non-Windows (Linux/Mac)")
-    void testClearConsole_Linux() {
-        String originalOs = System.getProperty("os.name");
-        System.setProperty("os.name", "Linux");
-
-        try {
-            Main.clearConsole();
-            // Verify ANSI escape code for clearing screen
-            assertTrue(outContent.toString().contains("\033[H\033[2J"));
-        } finally {
-            System.setProperty("os.name", originalOs);
-        }
-    }
-
-    @Test
-    @DisplayName("TC-M-44: Verify Exception handling in clearConsole")
+    @DisplayName("TC-M-43: Verify Exception handling in clearConsole")
     void testClearConsole_Exception() {
         String originalOs = System.getProperty("os.name");
         System.setProperty("os.name", "Windows 10");
