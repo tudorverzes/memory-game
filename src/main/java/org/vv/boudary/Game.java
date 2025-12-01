@@ -30,7 +30,7 @@ public class Game {
 	}
 
 	public void run() {
-		while (!state.isComplete()) {
+        while (!state.isComplete()) {
 			playTurn();
 			checkGameCompletion();
 		}
@@ -67,11 +67,12 @@ public class Game {
 
 			System.out.println("No match found. Retry.");
 			try {
-				TimeUnit.SECONDS.sleep(2);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				System.err.println("Pause interrupted");
-			}
+				TimeUnit.SECONDS.sleep(5);
+			}  catch (InterruptedException e) {
+                System.err.println("Pause interrupted");
+                Thread.currentThread().interrupt();
+                return;
+            }
 			card1.setRevealed(false);
 			card2.setRevealed(false);
 			state.nextTurn();
@@ -79,11 +80,11 @@ public class Game {
 
 	}
 
-	private void checkGameCompletion() {
-		if (state.getBoard().areAllMatched()) {
-			state.setComplete(true);
-		}
-	}
+    private void checkGameCompletion() {
+        if (!state.isComplete() && state.getBoard().areAllMatched()) {
+            state.setComplete(true);
+        }
+    }
 
 	private void endGame() {
 		CliDisplay.displayGameEnd(state);

@@ -231,7 +231,10 @@ class GameTest {
         Game game = new Game(config);
         injectMockState(game, mockState);
 
-        when(mockState.isComplete()).thenReturn(false).thenReturn(true);
+        when(mockState.isComplete())
+                .thenReturn(false)
+                .thenReturn(false)
+                .thenReturn(true);
         when(mockState.getPlayers()).thenReturn(Collections.singletonList(mockPlayer1));
         when(mockState.getCurrentPlayer()).thenReturn(mockPlayer1);
         when(mockPlayer1.getName()).thenReturn("P1");
@@ -245,9 +248,13 @@ class GameTest {
              MockedStatic<CliDisplay> cliMock = mockStatic(CliDisplay.class)) {
 
             inputMock.when(() -> InputHandler.getCoordinateInput(anyString(), anyInt(), any(), any()))
-                    .thenReturn(new Coordinate(0, 0));
+                    .thenReturn(new Coordinate(0, 0))
+                    .thenReturn(new Coordinate(0, 1));
 
-            Thread testThread = new Thread(game::run);
+            Thread testThread = new Thread(() -> {
+                System.setErr(new PrintStream(errContent));  // <--- CRUCIAL FIX
+                game.run();
+            });
             testThread.start();
 
             Thread.sleep(100);
@@ -256,8 +263,10 @@ class GameTest {
         }
 
         String errOutput = errContent.toString();
+        System.out.println(errOutput);
         assertTrue(errOutput.contains("Pause interrupted"));
     }
+
 
     @Test
     @DisplayName("TC-GAME-08: Verify game completion detection and loop termination")

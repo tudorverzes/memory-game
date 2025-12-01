@@ -110,10 +110,17 @@ public class Main {
             Game game = new Game(config);
             game.run();
 
+            if (Thread.currentThread().isInterrupted()) {
+
+                Thread.currentThread().interrupt();
+                break;
+            }
+
             playAgain = InputHandler.getPlayAgain();
             currentArgs = new String[0];
         }
     }
+
 
     private static GameConfiguration parseArgsOrSetup(String[] args) {
         if (args.length > 0) {
